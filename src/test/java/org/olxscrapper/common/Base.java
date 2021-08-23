@@ -47,7 +47,7 @@ public abstract class Base implements SauceOnDemandSessionIdProvider {
 
     @Before
     public void setUp() throws Exception {
-        String browserName = System.getProperty("browserName");
+        String browserName = System.getenv("SELENIUM_BROWSER");
 
         this.driver = BrowserFactory.getBrowser(browserName);
         this.mailAccount = System.getenv("OLX_EMAIL");
@@ -87,6 +87,7 @@ public abstract class Base implements SauceOnDemandSessionIdProvider {
         });
 
         if (!newArticlesMap.isEmpty()) {
+            System.out.println("Found total: " + newArticlesMap.size() + " articles");
             processArticles(newArticlesMap);
         }
     }
