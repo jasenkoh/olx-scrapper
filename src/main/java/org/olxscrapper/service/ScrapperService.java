@@ -1,6 +1,7 @@
 package org.olxscrapper.service;
 
 import org.apache.commons.lang3.StringUtils;
+import org.olxscrapper.config.WebDriverFactory;
 import org.olxscrapper.domain.Article;
 import org.olxscrapper.domain.Filter;
 import org.olxscrapper.repository.ArticleRepository;
@@ -16,6 +17,7 @@ import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Properties;
@@ -26,26 +28,27 @@ import java.util.stream.Collectors;
 public class ScrapperService {
     private static final String ARTICLE_TITLE_URL_FORMAT = "<a href=\"%s\">%s</a>";
     private static final String BASE_URL = "https://www.olx.ba/pretraga?stanje=0&vrstapregleda=tabela&sort_order=desc&vrsta=samoprodaja&";
-    private final WebDriver webDriver;
     private final FilterRepository filterRepository;
     private final ArticleRepository articleRepository;
     private final String mailAccount;
     private final String emailPass;
 
+    private WebDriver webDriver;
+
     public ScrapperService(ArticleRepository articleRepository,
         Environment environment,
-        WebDriver webDriver,
         FilterRepository filterRepository) {
         this.articleRepository = articleRepository;
-        this.webDriver = webDriver;
         this.filterRepository = filterRepository;
         this.mailAccount = environment.getProperty("OLX_EMAIL");
         this.emailPass = environment.getProperty("EMAIL_PASS");
     }
 
     public void scrapPages() {
+        webDriver = WebDriverFactory.initWebDriver();
+
         filterRepository.findByActiveTrue().forEach(filter -> {
-            System.out.println("Processing filter: " + filter.getSearchPageName());
+            System.out.println("Processing filter: " + filter.getSearchPageName() + " at " + LocalDateTime.now());
 
             try {
                 webDriver.get(BASE_URL + filter.getQueryParams());
@@ -54,11 +57,15 @@ public class ScrapperService {
                 e.printStackTrace();
             }
         });
+
+        System.out.println("Finished scrapping pages...");
+        webDriver.quit();
     }
 
     public void processArticle(Filter filter) throws IOException {
         List<Article> newArticles = new ArrayList<>();
         List<Article> existingArticles = articleRepository.findAll();
+
         Set<String> existingArticleIds = existingArticles
             .stream()
             .map(Article::getExternalId)
@@ -77,6 +84,8 @@ public class ScrapperService {
             sendMail(filter, newArticles);
 
             articleRepository.saveAll(newArticles);
+        } else {
+            System.out.println("No articles found");
         }
     }
 
