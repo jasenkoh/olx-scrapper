@@ -8,7 +8,6 @@ import org.olxscrapper.repository.FilterRepository;
 import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
@@ -75,7 +74,9 @@ public class ScrapperService {
 
         if (!newArticles.isEmpty()) {
             System.out.println("Found total: " + newArticles.size() + " articles");
-            processArticles(filter, newArticles);
+            sendMail(filter, newArticles);
+
+            articleRepository.saveAll(newArticles);
         }
     }
 
@@ -113,13 +114,12 @@ public class ScrapperService {
             message.setContent(content, "text/html");
 
             Transport.send(message);
-
         } catch (MessagingException e) {
             e.printStackTrace();
         }
     }
 
-    public void processArticles(Filter filter, List<Article> articles) throws FileNotFoundException {
+    private void sendMail(Filter filter, List<Article> articles) throws FileNotFoundException {
         StringBuilder mailContent = new StringBuilder();
         mailContent
             .append(webDriver.findElement(By.className("brojrezultata")).getText())
@@ -137,7 +137,6 @@ public class ScrapperService {
                 .append("<br/><br/>");
         });
 
-        articleRepository.saveAll(articles);
         sendMail(filter, mailContent.toString());
     }
 }
