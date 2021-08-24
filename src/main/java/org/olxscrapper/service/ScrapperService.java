@@ -29,8 +29,11 @@ public class ScrapperService {
     private final WebDriver webDriver;
     private final FilterRepository filterRepository;
     private final ArticleRepository articleRepository;
+
     @Value("${OLX_EMAIL}")
     private String mailAccount;
+    @Value("${EMAIL_PASS}")
+    private String emailPass;
 
     public ScrapperService(ArticleRepository articleRepository,
         WebDriver webDriver,
@@ -92,7 +95,7 @@ public class ScrapperService {
 
         return Session.getInstance(properties, new javax.mail.Authenticator() {
             protected PasswordAuthentication getPasswordAuthentication() {
-                return new PasswordAuthentication(mailAccount, System.getenv("EMAIL_PASS"));
+                return new PasswordAuthentication(mailAccount, emailPass);
             }
         });
     }
