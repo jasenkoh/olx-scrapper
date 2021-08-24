@@ -9,6 +9,7 @@ import org.openqa.selenium.By;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
 import javax.mail.*;
@@ -29,18 +30,18 @@ public class ScrapperService {
     private final WebDriver webDriver;
     private final FilterRepository filterRepository;
     private final ArticleRepository articleRepository;
-
-    @Value("${OLX_EMAIL}")
-    private String mailAccount;
-    @Value("${EMAIL_PASS}")
-    private String emailPass;
+    private final String mailAccount;
+    private final String emailPass;
 
     public ScrapperService(ArticleRepository articleRepository,
+        Environment environment,
         WebDriver webDriver,
         FilterRepository filterRepository) {
         this.articleRepository = articleRepository;
         this.webDriver = webDriver;
         this.filterRepository = filterRepository;
+        this.mailAccount = environment.getProperty("OLX_EMAIL");
+        this.emailPass = environment.getProperty("EMAIL_PASS");
     }
 
     public void scrapPages() {
