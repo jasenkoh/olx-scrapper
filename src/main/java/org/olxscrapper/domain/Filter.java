@@ -13,6 +13,9 @@ public class Filter {
     @Column(unique = true)
     private String searchPageName;
 
+    @Column(name = "isActive", columnDefinition = "boolean default true")
+    private boolean active;
+
     public Filter() {
     }
 
@@ -44,5 +47,13 @@ public class Filter {
 
     public void setSearchPageName(String searchPageName) {
         this.searchPageName = searchPageName;
+    }
+
+    public boolean isActive() {
+        return active;
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
     }
 }

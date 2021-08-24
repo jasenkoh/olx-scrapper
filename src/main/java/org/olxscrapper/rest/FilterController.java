@@ -22,15 +22,17 @@ public class FilterController {
         return ResponseEntity.ok(filter);
     }
 
-    @DeleteMapping("/filters/{filterId}")
-    public ResponseEntity<Void> removeFilter(@PathVariable("filterId") int filterId) {
-        Optional<Filter> existingFilter = filterRepository.findById(filterId);
+    @PostMapping("/filters/{filterId}/{status}")
+    public ResponseEntity<Void> toggleFilter(@PathVariable("filterId") int filterId, @PathVariable("status") boolean active) {
+        Filter existingFilter = filterRepository.findById(filterId).orElse(null);
 
-        if (!existingFilter.isPresent()) {
+        if (existingFilter == null) {
             return ResponseEntity.notFound().build();
         }
 
-        filterRepository.delete(existingFilter.get());
+        existingFilter.setActive(active);
+        filterRepository.save(existingFilter);
+
         return ResponseEntity.ok().build();
     }
 }

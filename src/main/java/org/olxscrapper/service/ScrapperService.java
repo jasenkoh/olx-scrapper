@@ -44,7 +44,7 @@ public class ScrapperService {
     }
 
     public void scrapPages() {
-        filterRepository.findAll().forEach(filter -> {
+        filterRepository.findByActiveTrue().forEach(filter -> {
             System.out.println("Processing filter: " + filter.getSearchPageName());
 
             try {
