@@ -1,33 +1,46 @@
 # OLX article scrapper
 
 
-Simple selenium project that navigates to olx.ba page with specified search query params and scans if there are new articles since last execution.
+Spring boot application that uses selenium web driver to navigate to olx.ba page with specified search query params and scans if there are new articles since last execution.
 Send email if there is a new article found on olx based on the criteria.
 
 ### Requirements
 - Java 11
 - Maven
-- Firefox
+- MySQL
+- Chrome
 
-By default, selenium starts with headless firefox browser, in order to run it with chrome, new environment variable should be added `SELENIUM_BROWSER=chrome`
 
 ### Add two environment variables
 - EMAIL_PASS - password of a google account
 - OLX_EMAIL - Gmail account
+- OLX_DB_PWD - Gmail account
+- OLX_DB_URL - Gmail account
 
-### Run with `mvn install`
- 
 
-Locally, schedule a job to run every 10 minutes (make sure that jar file is generated, if not run `mvn clean package`) on OS X
+### Running application
+
+1. Run seed.sql script against MySQL server
+2. Make sure that environment variables mentioned above are set
+3. `mvn spring-boot:run`
+
+Schedule a job to invoke endpoint every 10 minutes (make sure that jar file is generated, if not run `mvn clean package`) on OS X
 
 1. `env EDITOR=nano crontab -e`
-2. `*/10 * * * * cd /full/path/olx-scrapper && ./run_olx_scrapper.sh  >> /full/path/olx-scrapper/script_output.log 2>&1`
+2. `*/10 * * * * curl http://localhost:8888/scrap-pages`
 3. `crontab -l` to verify that new cronjob is added
 
-### Possible upgrades
+### Adding new filter
 
-1. Use cloud storage
-2. Deploy
+```
+POST: http://localhost:8888/filters
+{
+    "queryParams": "...",
+    "searchPageName": "...",
+    "active": true
+}
+```
 
+### Deactivating existing filter
 
-
+`POST: http://localhost:8888/filters/{filterId}/{status}` where `status` is set to `true` or `false`
