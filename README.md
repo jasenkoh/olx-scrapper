@@ -14,8 +14,8 @@ Send email if there is a new article found on olx based on the criteria.
 ### Add two environment variables
 - EMAIL_PASS - password of a google account
 - OLX_EMAIL - Gmail account
-- OLX_DB_PWD - Gmail account
-- OLX_DB_URL - Gmail account
+- OLX_DB_PWD - Database Password account
+- OLX_DB_URL - DB URL with a name of a database, e.g. `url.rds.amazonaws.com:3306/olx-scrapper`
 
 
 ### Running application
