@@ -44,3 +44,8 @@ POST: http://localhost:8888/filters
 ### Deactivating existing filter
 
 `POST: http://localhost:8888/filters/{filterId}/{status}` where `status` is set to `true` or `false`
+
+
+### Potential improvements
+1. Structure query building instead of persisting `queryParams` in DB in order to generate URL.
+2. Extend E-Mail content and move to e.g. Sendgrid
