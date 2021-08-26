@@ -30,6 +30,10 @@ Schedule a job to invoke endpoint every 10 minutes (make sure that jar file is g
 2. `*/10 * * * * curl http://localhost:8888/scrap-pages`
 3. `crontab -l` to verify that new cronjob is added
 
+### Get all filters
+
+`GET: http://localhost:8888/filters`
+
 ### Adding new filter
 
 ```
