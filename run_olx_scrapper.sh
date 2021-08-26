@@ -3,7 +3,7 @@ source $HOME/.bash_profile
 
 echo "Pull latest changes"
 git fetch
-git pull origin/main
+git pull
 
 echo "Generate new jar file"
 mvn clean package
