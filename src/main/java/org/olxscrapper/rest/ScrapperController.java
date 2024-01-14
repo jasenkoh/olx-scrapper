@@ -19,4 +19,10 @@ public class ScrapperController {
         scrapperService.scrapPages();
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/visit-article")
+    public ResponseEntity<Void> visitArticle() {
+        scrapperService.processArticlesInChunks();
+        return ResponseEntity.ok().build();
+    }
 }
