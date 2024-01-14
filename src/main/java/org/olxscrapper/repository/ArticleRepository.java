@@ -6,7 +6,7 @@ import org.springframework.data.repository.CrudRepository;
 
 import java.util.List;
 
-public interface ArticleRepository extends CrudRepository<Article, Integer> {
+public interface ArticleRepository extends CrudRepository<Article, Long> {
     List<Article> findAll();
     @Query(value = "SELECT * FROM article ORDER BY external_id DESC LIMIT 1", nativeQuery = true)
     Article findDistinctTopByExternalId();

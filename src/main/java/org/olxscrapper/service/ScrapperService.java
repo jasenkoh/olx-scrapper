@@ -6,9 +6,11 @@ import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.olxscrapper.config.WebDriverFactory;
 import org.olxscrapper.domain.Article;
+import org.olxscrapper.domain.ArticleSeed;
+import org.olxscrapper.domain.ArticleSeedStatus;
 import org.olxscrapper.domain.Filter;
-import org.olxscrapper.domain.IndexChunk;
 import org.olxscrapper.repository.ArticleRepository;
+import org.olxscrapper.repository.ArticleSeedRepository;
 import org.olxscrapper.repository.FilterRepository;
 import org.openqa.selenium.By;
 import org.openqa.selenium.NoSuchElementException;
@@ -25,6 +27,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -36,15 +39,18 @@ public class ScrapperService {
 
     private final FilterRepository filterRepository;
     private final ArticleRepository articleRepository;
+    private final ArticleSeedRepository articleSeedRepository;
     private final MailService mailService;
 
 
     public ScrapperService(ArticleRepository articleRepository,
                            MailService mailService,
+                           ArticleSeedRepository articleSeedRepository,
                            FilterRepository filterRepository) {
         this.articleRepository = articleRepository;
         this.filterRepository = filterRepository;
         this.mailService = mailService;
+        this.articleSeedRepository = articleSeedRepository;
     }
 
     public void scrapPages() {
@@ -66,22 +72,23 @@ public class ScrapperService {
     }
 
 
+    private final String BASE_ARTICLE_URL = "https://olx.ba/artikal/";
+
+    /**
+     * This method will process articles in chunks of 100 articles fetched from database.
+     * It will process 8 chunks in parallel.
+     * It will wait 500ms between each chunk to avoid overloading the database and update status of seed articles.
+     */
     public void processArticlesInChunks() {
-        Long endArticleId = 56126734L;
-        Long baseArticleId = 50000000L;
-        int chunkSize = 800000;
+        int threadPoolSize = 8;
 
-        List<IndexChunk> chunks = splitIntoChunks(baseArticleId, endArticleId, chunkSize);
-        ExecutorService executorService = Executors.newFixedThreadPool(chunks.size());
+        ExecutorService executorService = Executors.newFixedThreadPool(8);
+        ScheduledExecutorService scheduledExecutorService = Executors.newSingleThreadScheduledExecutor();
 
-        for (IndexChunk chunk : chunks) {
-            executorService.submit(() -> {
-                try {
-                    processChunk(chunk);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            });
+        for (int i = 0; i < threadPoolSize; i++) {
+            scheduledExecutorService.schedule(() -> {
+                executorService.submit(() -> processChunk(articleSeedRepository.findNewRandom()));
+            }, i * 500, TimeUnit.MILLISECONDS);
         }
 
         executorService.shutdown();
@@ -92,32 +99,26 @@ public class ScrapperService {
         }
     }
 
-
-    private static List<IndexChunk> splitIntoChunks(Long startIndex, Long endIndex, long chunkSize) {
-        List<IndexChunk> chunks = new ArrayList<>();
-
-        for (long i = startIndex; i <= endIndex; i += chunkSize) {
-            long end = Math.min(i + chunkSize - 1, endIndex);
-            chunks.add(new IndexChunk(i, end));
+    private void processChunk(List<ArticleSeed> articleSeeds)  {
+        if (articleSeeds.isEmpty()) {
+            logger.info("No articles found");
+            return;
         }
 
-        return chunks;
-    }
+        articleSeedRepository.saveAll(articleSeeds.stream().peek(articleSeed -> articleSeed.setStatus(ArticleSeedStatus.IN_PROGRESS)).collect(Collectors.toList()));
 
-    private void processChunk(IndexChunk chunk) throws IOException {
-        Article lastArticle = articleRepository.findDistinctTopBetweenExternalId(chunk.getStart(), chunk.getEnd());
-        long startArticleId = lastArticle != null ? lastArticle.getExternalId() + 1 : chunk.getStart();
         try {
-            for (long i = startArticleId; i <= chunk.getEnd(); i++) {
-                String BASE_ARTICLE_URL = "https://olx.ba/artikal/";
-                String articleUrl = BASE_ARTICLE_URL + i;
+            for (ArticleSeed articleSeed : articleSeeds) {
+                String articleUrl = BASE_ARTICLE_URL + articleSeed.getId();
                 logger.info("Processing article: " + articleUrl);
-                processArticlePage(articleUrl, i);
+                processArticlePage(articleUrl, articleSeed.getId());
             }
             logger.info("Finished visiting articles...");
-        }catch (Exception e){
+        } catch (Exception e) {
             logger.info("Unhandled exception occurred for url: " + e);
         }
+
+        processChunk(articleSeedRepository.findNewRandom());
     }
 
     private void processArticlePage(String url, Long id) {
@@ -132,13 +133,13 @@ public class ScrapperService {
             }
             article.setTitle(title);
             articleRepository.save(article);
+            articleSeedRepository.save(new ArticleSeed(id, ArticleSeedStatus.DONE));
         } catch (NoSuchElementException noSuchElementException) {
             logger.info("Article not found at: " + url);
             articleRepository.save(article);
         } catch (HttpStatusException e) {
             logger.info("Article not found at: " + url);
-        }
-        catch (Exception e) {
+        } catch (Exception e) {
             logger.info("Unhandled exception occurred for url: " + url, e);
         }
     }
