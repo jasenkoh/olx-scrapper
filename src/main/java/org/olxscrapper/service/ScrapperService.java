@@ -1,6 +1,9 @@
 package org.olxscrapper.service;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jsoup.HttpStatusException;
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
 import org.olxscrapper.config.WebDriverFactory;
 import org.olxscrapper.domain.Article;
 import org.olxscrapper.domain.Filter;
@@ -66,7 +69,7 @@ public class ScrapperService {
     public void processArticlesInChunks() {
         Long endArticleId = 56126734L;
         Long baseArticleId = 50000000L;
-        int chunkSize = 1000000;
+        int chunkSize = 800000;
 
         List<IndexChunk> chunks = splitIntoChunks(baseArticleId, endArticleId, chunkSize);
         ExecutorService executorService = Executors.newFixedThreadPool(chunks.size());
@@ -102,7 +105,6 @@ public class ScrapperService {
     }
 
     private void processChunk(IndexChunk chunk) throws IOException {
-        WebDriver webDriver = WebDriverFactory.initWebDriver();
         Article lastArticle = articleRepository.findDistinctTopBetweenExternalId(chunk.getStart(), chunk.getEnd());
         long startArticleId = lastArticle != null ? lastArticle.getExternalId() + 1 : chunk.getStart();
         try {
@@ -110,20 +112,21 @@ public class ScrapperService {
                 String BASE_ARTICLE_URL = "https://olx.ba/artikal/";
                 String articleUrl = BASE_ARTICLE_URL + i;
                 logger.info("Processing article: " + articleUrl);
-                webDriver.get(articleUrl);
-                processArticlePage(webDriver, articleUrl, i);
+                processArticlePage(articleUrl, i);
             }
             logger.info("Finished visiting articles...");
-        } finally {
-            webDriver.quit();
+        }catch (Exception e){
+            logger.info("Unhandled exception occurred for url: " + e);
         }
     }
 
-    private void processArticlePage(WebDriver webDriver, String url, Long id) {
+    private void processArticlePage(String url, Long id) {
         String title = "unknown";
         Article article = new Article(id, url, title);
         try {
-            title = webDriver.findElement(By.className("main-title-listing")).getText();
+            Document document = Jsoup.connect(url).get();
+            title = document.title();
+
             if (title.toLowerCase().contains("opine")) {
                 logger.info("Found article: " + title + " at " + url);
             }
@@ -132,7 +135,10 @@ public class ScrapperService {
         } catch (NoSuchElementException noSuchElementException) {
             logger.info("Article not found at: " + url);
             articleRepository.save(article);
-        } catch (Exception e) {
+        } catch (HttpStatusException e) {
+            logger.info("Article not found at: " + url);
+        }
+        catch (Exception e) {
             logger.info("Unhandled exception occurred for url: " + url, e);
         }
     }
