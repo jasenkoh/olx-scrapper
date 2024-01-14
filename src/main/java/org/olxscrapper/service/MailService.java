@@ -3,7 +3,10 @@ package org.olxscrapper.service;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
 
-import javax.mail.*;
+import javax.mail.Message;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.util.Properties;
@@ -45,7 +48,7 @@ public class MailService {
             message.setContent(content, "text/html");
 
             Transport.send(message);
-        } catch (MessagingException e) {
+        } catch (Exception e) {
             e.printStackTrace();
         }
     }
